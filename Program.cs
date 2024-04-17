@@ -14,23 +14,35 @@ namespace EnigmaCLI
             if (args.Length < 1)
             {
                 Console.WriteLine("Usage: enigma-cli.exe <username>@<hostname> [-p <port>]");
-                return;
-            }
-            var server = args[0];
-            if (!server.Contains('@'))
-            {
-                Console.WriteLine("Invalid server format. Use <username>@<hostname>");
-                return;
-            }
-            var serverParts = server.Split('@');
-            username = serverParts[0];
-            hostname = serverParts[1];
-            if (args.Length == 3 && args[1] == "-p")
-            {
-                if (!int.TryParse(args[2], out port))
+                Console.Write("Enter <username>@<hostname>: ");
+                var server = Console.ReadLine();
+                if (string.IsNullOrEmpty(server) || !server.Contains('@'))
                 {
-                    Console.WriteLine("Invalid port number.");
+                    Console.WriteLine("Invalid server format. Use <username>@<hostname>");
                     return;
+                }
+                var serverParts = server.Split('@');
+                username = serverParts[0];
+                hostname = serverParts[1];
+            }
+            else
+            {
+                var server = args[0];
+                if (!server.Contains('@'))
+                {
+                    Console.WriteLine("Invalid server format. Use <username>@<hostname>");
+                    return;
+                }
+                var serverParts = server.Split('@');
+                username = serverParts[0];
+                hostname = serverParts[1];
+                if (args.Length == 3 && args[1] == "-p")
+                {
+                    if (!int.TryParse(args[2], out port))
+                    {
+                        Console.WriteLine("Invalid port number.");
+                        return;
+                    }
                 }
             }
             Console.Write("Enter your password: ");
