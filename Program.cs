@@ -1,10 +1,4 @@
-﻿// Enigma CLI is a helper application for easing the lack of
-// copy-ssh-id functionality in Windows. It is a simple console
-// application that reads a public key file in the default location, or creates a key pair if it doesn't exist.
-// After reading the public key, it connects to a remote server using SSH and copies the public key to the authorized_keys file.
-using System;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Diagnostics;
 using Renci.SshNet;
 using Renci.SshNet.Common;
 
