@@ -1,52 +1,73 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
 using Renci.SshNet;
 using Renci.SshNet.Common;
+using Spectre.Console;
 
-namespace EnigmaCLI
+namespace Enigma_SSH_Helper
 {
     class Program
     {
+        private static void EnsureSshKeygenAvailable()
+        {
+            try
+            {
+                // Try to execute ssh-keygen to see if it is available
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "ssh-keygen",
+                    Arguments = "-V", // This argument makes ssh-keygen print its version, which is a harmless way to check if it's available
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+                var process = Process.Start(psi);
+                process.WaitForExit();
+
+                // If the exit code is not 0, ssh-keygen is not available
+                if (process.ExitCode != 0)
+                {
+                    throw new Exception("ssh-keygen not found.");
+                }
+            }
+            catch
+            {
+                Console.WriteLine("ssh-keygen not found. Please install the OpenSSH Client feature for Windows and try again.");
+                Environment.Exit(1); // Exit the application
+            }
+        }
         static void Main(string[] args)
         {
-            var username = string.Empty;
-            var hostname = string.Empty;
-            var port = 22;
-            if (args.Length < 1)
-            {
-                Console.WriteLine("Usage: enigma-cli.exe <username>@<hostname> [-p <port>]");
-                Console.Write("Enter <username>@<hostname>: ");
-                var server = Console.ReadLine();
-                if (string.IsNullOrEmpty(server) || !server.Contains('@'))
-                {
-                    Console.WriteLine("Invalid server format. Use <username>@<hostname>");
-                    return;
-                }
-                var serverParts = server.Split('@');
-                username = serverParts[0];
-                hostname = serverParts[1];
-            }
-            else
-            {
-                var server = args[0];
-                if (!server.Contains('@'))
-                {
-                    Console.WriteLine("Invalid server format. Use <username>@<hostname>");
-                    return;
-                }
-                var serverParts = server.Split('@');
-                username = serverParts[0];
-                hostname = serverParts[1];
-                if (args.Length == 3 && args[1] == "-p")
-                {
-                    if (!int.TryParse(args[2], out port))
+            //Check if the user has the OpenSSH Client feature installed
+            //EnsureSshKeygenAvailable();
+            // Use Spectre.Console to ask for server details
+            var serverInput = AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter <username>@<hostname>:")
+                    .Validate(input =>
                     {
-                        Console.WriteLine("Invalid port number.");
-                        return;
-                    }
-                }
-            }
-            Console.Write("Enter your password: ");
-            var password = ReadPassword();
+                        if (string.IsNullOrEmpty(input) || !input.Contains('@'))
+                        {
+                            return ValidationResult.Error("[red]Invalid server format. Use <username>@<hostname>[/]");
+                        }
+                        return ValidationResult.Success();
+                    }));
+
+            var serverParts = serverInput.Split('@');
+            var username = serverParts[0];
+            var hostname = serverParts[1];
+
+            // Ask for port with a default value
+            var port = AnsiConsole.Prompt(
+                new TextPrompt<int>("Enter port:")
+                    .DefaultValue(22)
+                    .Validate(input => input > 0 && input <= 65535 ? ValidationResult.Success() : ValidationResult.Error("[red]Invalid port number.[/]")));
+
+            // Securely ask for password
+            var password = AnsiConsole.Prompt(
+                new TextPrompt<string>("Enter your password:")
+                    .Secret());
 
             var privateKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", "id_rsa");
             var publicKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", "id_rsa.pub");
@@ -111,5 +132,7 @@ namespace EnigmaCLI
             Console.WriteLine();
             return password;
         }
+
+
     }
 }

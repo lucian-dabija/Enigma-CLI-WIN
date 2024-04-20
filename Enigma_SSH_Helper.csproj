@@ -3,10 +3,10 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0-windows10.0.17763.0</TargetFramework>
-    <RootNamespace>Enigma_CLI_WIN</RootNamespace>
+    <RootNamespace>Enigma_SSH_Helper</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <StartupObject>EnigmaCLI.Program</StartupObject>
+    <StartupObject>Enigma_SSH_Helper.Program</StartupObject>
     <ApplicationIcon>icons8-key.ico</ApplicationIcon>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <SignAssembly>False</SignAssembly>
@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.48.0" />
     <PackageReference Include="SSH.NET" Version="2024.0.0" />
   </ItemGroup>
 
