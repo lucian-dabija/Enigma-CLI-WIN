@@ -1,6 +1,5 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Diagnostics;
+using System.Net.Sockets;
 using Renci.SshNet;
 using Renci.SshNet.Common;
 using Spectre.Console;
@@ -40,10 +39,12 @@ namespace Enigma_SSH_Helper
         }
         static void Main(string[] args)
         {
-            //Check if the user has the OpenSSH Client feature installed
-            //EnsureSshKeygenAvailable();
-            // Use Spectre.Console to ask for server details
-            var serverInput = AnsiConsole.Prompt(
+            while (true)
+            {
+                //Check if the user has the OpenSSH Client feature installed
+                //EnsureSshKeygenAvailable();
+                // Use Spectre.Console to ask for server details
+                var serverInput = AnsiConsole.Prompt(
                 new TextPrompt<string>("Enter <username>@<hostname>:")
                     .Validate(input =>
                     {
@@ -54,50 +55,59 @@ namespace Enigma_SSH_Helper
                         return ValidationResult.Success();
                     }));
 
-            var serverParts = serverInput.Split('@');
-            var username = serverParts[0];
-            var hostname = serverParts[1];
+                var serverParts = serverInput.Split('@');
+                var username = serverParts[0];
+                var hostname = serverParts[1];
 
-            // Ask for port with a default value
-            var port = AnsiConsole.Prompt(
-                new TextPrompt<int>("Enter port:")
-                    .DefaultValue(22)
-                    .Validate(input => input > 0 && input <= 65535 ? ValidationResult.Success() : ValidationResult.Error("[red]Invalid port number.[/]")));
+                // Ask for port with a default value
+                var port = AnsiConsole.Prompt(
+                    new TextPrompt<int>("Enter port:")
+                        .DefaultValue(22)
+                        .Validate(input => input > 0 && input <= 65535 ? ValidationResult.Success() : ValidationResult.Error("[red]Invalid port number.[/]")));
 
-            // Securely ask for password
-            var password = AnsiConsole.Prompt(
-                new TextPrompt<string>("Enter your password:")
-                    .Secret());
+                // Securely ask for password
+                var password = AnsiConsole.Prompt(
+                    new TextPrompt<string>("Enter your password:")
+                        .Secret());
 
-            var privateKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", "id_rsa");
-            var publicKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", "id_rsa.pub");
-            if (!File.Exists(publicKeyPath))
-            {
-                Console.WriteLine("Public key not found. Do you want to generate a new key pair? (y/n)");
-                var response = Console.ReadLine();
-                if (response.ToLower() == "y")
+                var privateKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", "id_rsa");
+                var publicKeyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", "id_rsa.pub");
+                if (!File.Exists(publicKeyPath))
                 {
-                    GenerateKeyPair(privateKeyPath, publicKeyPath);
+                    Console.WriteLine("Public key not found. Do you want to generate a new key pair? (y/n)");
+                    var response = Console.ReadLine();
+                    if (response.ToLower() == "y")
+                    {
+                        GenerateKeyPair(privateKeyPath, publicKeyPath);
+                    }
+                    else
+                    {
+                        return;
+                    }
                 }
-                else
+                var connectionInfo = new PasswordConnectionInfo(hostname, port, username, password);
+                using (var client = new SshClient(connectionInfo))
                 {
-                    return;
-                }
-            }
-            var connectionInfo = new PasswordConnectionInfo(hostname, port, username, password);
-            using (var client = new SshClient(connectionInfo))
-            {
-                try
-                {
-                    client.Connect();
-                    var publicKeyText = File.ReadAllText(publicKeyPath);
-                    client.RunCommand($"echo \"{publicKeyText}\" >> ~/.ssh/authorized_keys");
-                    client.Disconnect();
-                    Console.WriteLine("Public key has been copied to the remote server.");
-                }
-                catch (SshException e)
-                {
-                    Console.WriteLine($"An error occurred: {e.Message}");
+                    try
+                    {
+                        client.Connect();
+                        var publicKeyText = File.ReadAllText(publicKeyPath);
+                        client.RunCommand($"echo \"{publicKeyText}\" >> ~/.ssh/authorized_keys");
+                        client.Disconnect();
+                        Console.WriteLine("Public key has been copied to the remote server.");
+                    }
+                    catch (SshAuthenticationException)
+                    {
+                        Console.WriteLine("Authentication failed. Please check your username and password.");
+                    }
+                    catch (SocketException)
+                    {
+                        Console.WriteLine("Could not connect to the server. Please check the server address and port.");
+                    }
+                    catch (SshException e)
+                    {
+                        Console.WriteLine($"An error occurred: {e.Message}");
+                    }
                 }
             }
         }
